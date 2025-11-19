@@ -1,48 +1,55 @@
 """
-Database Schemas
+Database Schemas for Custom Bot Selling Platform
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a collection in MongoDB.
+Collection name is the lowercase class name.
 """
-
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
-# Example schemas (replace with your own):
-
-class User(BaseModel):
+class Useraccount(BaseModel):
     """
     Users collection schema
-    Collection name: "user" (lowercase of class name)
+    Collection: "useraccount"
     """
-    name: str = Field(..., description="Full name")
     email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    name: str = Field(..., description="Full name")
+    password_hash: str = Field(..., description="SHA-256 salted hash of password")
+    salt: str = Field(..., description="Salt used for hashing")
+    is_active: bool = Field(True)
+    is_admin: bool = Field(False)
 
-class Product(BaseModel):
+class Botplan(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    Bot plans/products available for purchase
+    Collection: "botplan"
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    slug: str = Field(..., description="URL-safe identifier")
+    title: str
+    description: Optional[str] = None
+    price: float = Field(..., ge=0)
+    interval: str = Field("one-time", description="billing cycle: one-time | monthly | yearly")
+    features: List[str] = Field(default_factory=list)
+    active: bool = Field(True)
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Order(BaseModel):
+    """
+    Customer orders and payment records
+    Collection: "order"
+    """
+    user_id: str = Field(..., description="ID of the purchaser (stringified ObjectId)")
+    plan_slug: str
+    amount: float
+    currency: str = Field("USD")
+    status: str = Field("created", description="created | approved | completed | failed | cancelled")
+    paypal_order_id: Optional[str] = None
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Sessiontoken(BaseModel):
+    """
+    Simple bearer token sessions
+    Collection: "sessiontoken"
+    """
+    user_id: str
+    token: str
+    expires_at: datetime
